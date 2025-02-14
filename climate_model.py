@@ -40,8 +40,8 @@ a_DEFAULT = 0.003
 b_DEFAULT = 0.049
 #endregion
 
-# ClimateModel class based on Hansen et al. (1981) model implemented in Excel for MTxCCC
-class ClimateModel:
+# TODO: does this need to be a class
+class HansenEtAl1981:
     def __init__(self, climate_sensitivity=lmbd_DEFAULT, 
                  diffusivity=K_DEFAULT, 
                  mixed_layer_depth=dm_DEFAULT, 
@@ -71,13 +71,25 @@ class ClimateModel:
         self.b = b
 
         # pre industrial avg
+        # TODO: maybe this should be calculated from the historical data
         self.pre_industrial = 0.07
 
     def init_ocean_temp(self, Tm=0.0, Td=0.0):
         self.Tm = Tm
         self.Td = Td
 
-    def run(self, historical_forcing_df, ssps_forcing_df=None, scaling_factor=None, return_forcings=False):
+    def run(self, historical_forcing_df:pd.DataFrame, ssps_forcing_df:pd.DataFrame=None, scaling_factor:dict=None, return_forcings:bool=False):
+        '''
+        Convert string representation of a number into a float.
+
+            Parameters:
+                x (str): specific string representation of a number
+                scaling_factor (int): factor of 10 to scale up (positive) or down (negative)
+
+            Returns:
+                number (float): float value of string representation
+        '''
+        # TODO: take in only one dataframe assuming user has already concatenated the historical and SSPs forcing data
         # concatenate historical and SSPs forcing data
         if ssps_forcing_df is not None:
             ssps_forcing_df = ssps_forcing_df.set_index('YEAR')
@@ -87,6 +99,8 @@ class ClimateModel:
 
         # get forcing factors with available scaling factor
         forcing_factors = list(set(scaling_factor.keys()).intersection(set(forcing_df.columns)))
+
+        # TODO: add error handling if no forcing factors are found
 
         # create an empty DataFrame to store the results
         columns = ['Forcing', 'Deep dT', 'Mixed dT', 'Pred Anom']
