@@ -116,8 +116,9 @@ class HansenEtAl1981:
         self.a = a
         self.b = b
 
-    def run(self, historical_forcing_df: pd.DataFrame,
-            ssps_forcing_df: pd.DataFrame = None,
+    # TODO: split func into one which only takes total forcing and another which takes individual forcing factors
+    def run(self, historical_forcings_df: pd.DataFrame,
+            ssps_forcings_df: pd.DataFrame = None,
             scaling_factor: dict[str, float] = None,
             return_forcings: bool = False) -> pd.DataFrame:
         '''
@@ -132,19 +133,24 @@ class HansenEtAl1981:
         :return: DataFrame containing the results of the model run: deep ocean temperature, mixed layer temperature, and global temperature anomaly
         :rtype: pd.DataFrame
         '''
+        # validate parameters
+        if scaling_factor is None or len(scaling_factor) == 0:
+            raise ValueError('scaling_factor must be provided and not empty')
+
         # TODO: take in only one dataframe assuming user has already concatenated the historical and SSPs forcing data
         # concatenate historical and SSPs forcing data
-        if ssps_forcing_df is not None:
-            ssps_forcing_df = ssps_forcing_df.set_index('YEAR')
-            forcing_df = pd.concat([historical_forcing_df, ssps_forcing_df])
+        if ssps_forcings_df is not None:
+            ssps_forcings_df = ssps_forcings_df.set_index('YEAR')
+            forcing_df = pd.concat([historical_forcings_df, ssps_forcings_df])
         else:
-            forcing_df = historical_forcing_df
+            forcing_df = historical_forcings_df
 
         # get forcing factors with available scaling factor
         forcing_factors = list(
             set(scaling_factor.keys()).intersection(set(forcing_df.columns)))
 
-        # TODO: add error handling if no forcing factors are found
+        if len(forcing_factors) == 0:
+            raise ValueError("No forcing factors with available scaling found.")
 
         # create an empty DataFrame to store the results
         columns = ['Forcing', 'Deep dT', 'Mixed dT', 'Pred Anom']
