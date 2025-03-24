@@ -118,7 +118,7 @@ class HansenEtAl1981:
 
     # TODO: split func into one which only takes total forcing and another which takes individual forcing factors
     def run(self, historical_forcings_df: pd.DataFrame,
-            ssps_forcings_df: pd.DataFrame = None,
+            ssp_forcings_df: pd.DataFrame = None,
             scaling_factor: dict[str, float] = None,
             return_forcings: bool = False) -> pd.DataFrame:
         '''
@@ -133,21 +133,29 @@ class HansenEtAl1981:
         :return: DataFrame containing the results of the model run: deep ocean temperature, mixed layer temperature, and global temperature anomaly
         :rtype: pd.DataFrame
         '''
-        # validate parameters
-        if scaling_factor is None or len(scaling_factor) == 0:
-            raise ValueError('scaling_factor must be provided and not empty')
-
-        # TODO: take in only one dataframe assuming user has already concatenated the historical and SSPs forcing data
-        # concatenate historical and SSPs forcing data
-        if ssps_forcings_df is not None:
-            ssps_forcings_df = ssps_forcings_df.set_index('YEAR')
-            forcing_df = pd.concat([historical_forcings_df, ssps_forcings_df])
+        # prepare model parameters
+        if ssp_forcings_df is not None:
+            # conform ssp_forcings_df index for concat 
+            if ssp_forcings_df.index[0] != historical_forcings_df.index[-1]+1:
+                if 'YEAR' in ssp_forcings_df.columns and ssp_forcings_df['YEAR'].iloc[0] == historical_forcings_df.index[-1]+1:
+                    # use year column to set index
+                    ssp_forcings_df = ssp_forcings_df.set_index('YEAR')
+                else:
+                    # force ssp_forcings_df index to start at year after historical
+                    ssp_forcings_df.index = pd.RangeIndex(historical_forcings_df.index[-1]+1, historical_forcings_df.index[-1]+1+len(ssp_forcings_df))
+            
+            # concat historical and ssps forcing data
+            forcing_df = pd.concat([historical_forcings_df, ssp_forcings_df])
         else:
             forcing_df = historical_forcings_df
 
+        if scaling_factor is None:
+            scaling_factor = { col:1 for col in forcing_df.columns if col not in ['YEAR', 'SSP', 'TOTAL'] }
+        elif len(scaling_factor) == 0:
+            raise ValueError('If scaling_factor is provided, it must not be empty')
+
         # get forcing factors with available scaling factor
-        forcing_factors = list(
-            set(scaling_factor.keys()).intersection(set(forcing_df.columns)))
+        forcing_factors = list(set(scaling_factor.keys()).intersection(set(forcing_df.columns)))
 
         if len(forcing_factors) == 0:
             raise ValueError("No forcing factors with available scaling found.")
